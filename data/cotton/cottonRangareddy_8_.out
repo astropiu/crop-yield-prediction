@@ -1,0 +1,5 @@
+ApsimVersion = 7.10 r4158
+Title = Continuous Irrigated Cotton - deficit rule
+           Date       dw_total  nuptake_total          yield       bolls_sc        lai_max PlantExtractableWater
+   (dd/mm/yyyy)        (kg/ha)        (kg/ha)        (kg/ha)       (g/boll)        (m2/m2)                  (mm)
+     14/04/2019        10650.6          181.8         2436.3          3.402          3.762               196.058

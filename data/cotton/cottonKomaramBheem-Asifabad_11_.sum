@@ -1,0 +1,523 @@
+     ###     ######     #####   #   #     #   
+    #   #    #     #   #        #   ##   ##   
+   #     #   #     #   #        #   ##   ##   
+   #######   ######     #####   #   # # # #   
+   #     #   #              #   #   #  #  #   
+   #     #   #         #####    #   #  #  #   
+                                              
+                                              
+ The Agricultural Production Systems Simulator
+             Copyright(c) APSRU               
+
+Version                = 7.10 r4158
+Title                  = Continuous Irrigated Cotton - deficit rule
+   Component                        "clock" = %apsim%\Model\Clock.dll
+   Component                          "met" = %apsim%\Model\Input.dll
+Paddock:
+   Component                   "outputfile" = %apsim%\Model\Report.dll
+   Component                        "accum" = %apsim%\Model\Accum.dll
+   Component                   "fertiliser" = %apsim%\Model\Fertiliser.dll
+   Component                   "Irrigation" = %apsim%\Model\Irrigation.dll
+   Component            "Sowing fertiliser" = %apsim%\Model\Manager.dll
+   Component           "Cotton sowing rule" = %apsim%\Model\Manager.dll
+   Component "Fertilise on days after sowing - top up" = %apsim%\Model\Manager.dll
+   Component              "Harvesting rule" = %apsim%\Model\Manager.dll
+   Component           "PostHarvestTillage" = %apsim%\Model\Manager.dll
+   Component                   "Soil Water" = %apsim%\Model\SoilWat.dll
+   Component         "SurfaceOrganicMatter" = %apsim%\Model\SurfaceOM.dll
+   Component                "Soil Nitrogen" = %apsim%\Model\SoilN.dll
+   Component            "Irrigate on event" = %apsim%\Model\Manager2.dll
+   Component                       "Cotton" = %apsim%\Model\Cotton.dll
+
+------- clock Initialisation --------------------------------------------------
+     Sequencer phases:
+        prepare
+        init_step
+        do_management
+        run_one_step
+        do_pasture_water
+        process
+        do_pasture_growth
+        do_stock
+        do_cashbook
+        post
+        end_step
+     Simulation start date =  1/01/2018
+     Simulation end date   = 31/12/2019
+     Time step =           = 1440 (mins)
+
+------- met Initialisation ----------------------------------------------------
+     Sparse data is not allowed
+     INPUT File name: ..\mets\Komaram Bheem-Asifabad.met
+
+------- outputfile Initialisation ---------------------------------------------
+     Output frequency:
+        harvesting
+     Output variables:
+        dd/mm/yyyy as Date
+        dw_total
+        nuptake_total
+        yield
+        bolls_sc
+        lai_max
+        esw as PlantExtractableWater
+
+     Output file = Continuous Irrigated Cotton - deficit rule.out
+     Format = normal
+
+------- paddock.accum Initialisation ------------------------------------------
+     Initialising
+
+------- paddock.Irrigation Initialisation -------------------------------------
+      Initialising
+     
+        - Reading Parameters
+                      Irrigation parameters
+          -----------------------------------------------
+           Automatic Irrigation Application (Enabled)
+           critical fraction of available soil water =  0.60
+           depth for calculating available soil water =     800.00
+           Irrigation Allocation Budget (Disabled)
+          -----------------------------------------------
+
+------- paddock.Sowing fertiliser Initialisation ------------------------------
+     Manager rules:
+     
+     SECTION:- cotton.sowing
+             fertiliser apply amount = 160 (kg/ha), depth = 50 (mm), type = urea_n
+     END of rules
+     
+
+------- paddock.Cotton sowing rule Initialisation -----------------------------
+     Manager rules:
+     
+     SECTION:- start_of_day
+           if (paddock_is_fallow() = 1 and fallowin <> 'yes' and (nextcrop = 0 or nextcrop = 'cotton')) then
+              if (date_within('15-oct, 15-oct') = 1) then
+     if (rain[3] >= 30 and esw >= 0) or
+         ('yes' = 'yes' and today = date('15-oct'))) then
+        choosenextcrop = 'yes'
+        cotton sow plants_pm =11, sowing_depth = 50, cultivar = s71br, row_spacing = 1000, skiprow = 0
+     endif
+     if today = date('15-oct') then
+        choosenextcrop = 'yes'
+     endif
+              endif
+           endif
+     END of rules
+     
+
+------- paddock.Fertilise on days after sowing - top up Initialisation --------
+     Manager rules:
+     
+     SECTION:- start_of_day
+              if (cotton.daysaftersowing = 60) then
+     n_deficit = 250 - (no3(1) + nh4(1) + no3(2) + nh4(2) + no3(3) + nh4(3))
+     if (n_deficit > 0) then
+         'fertiliser' apply amount = n_deficit (kg/ha), depth = 50 (mm), type = urea_n ()
+     endif
+              endif
+     END of rules
+     
+
+------- paddock.Harvesting rule Initialisation --------------------------------
+     Manager rules:
+     
+     SECTION:- end_of_day
+                if ('cotton' = 'cotton') then
+         if (cotton.stagename = 'mature'  and  cotton.defol_das = 0) then
+             cotton defoliate
+         endif
+         if (cotton.stagename = 'harvest_ripe' or cotton.plantstatus = 'dead') then
+            cotton harvest
+            cotton end_crop
+         endif
+                endif
+     END of rules
+     
+
+------- paddock.PostHarvestTillage Initialisation -----------------------------
+     Manager rules:
+     
+     SECTION:- start_of_day
+     if (plant_status = 'out'  and  yesterdays_plant_status <> 'out' ) then
+     if ('user_defined' = 'user_defined') then
+         'surfaceorganicmatter' tillage type = user_defined, f_incorp = 0.95 (), tillage_depth = 150
+     else
+         'surfaceorganicmatter' tillage type = user_defined
+     endif
+     endif
+     yesterdays_plant_status = plant_status
+     
+     SECTION:- init
+     yesterdays_plant_status = 'out'
+     END of rules
+     
+     Manager creating a new local string variable : yesterdays_plant_status = out
+
+------- paddock.Soil Water Initialisation -------------------------------------
+     
+         - Reading constants
+     
+        - Reading Soil Property Parameters
+     
+        - Reading Soil Profile Parameters
+     Initial soilwater distributed using "sw" parameter.
+     
+     
+     
+                      Soil Profile Properties
+        ---------------------------------------------------------------------
+              Depth  Air_Dry  LL15   Dul    Sat     Sw     BD   Runoff  SWCON
+                mm     mm/mm  mm/mm  mm/mm  mm/mm  mm/mm  g/cc    wf
+        ---------------------------------------------------------------------
+            0.-  150.  0.110  0.220  0.430  0.480  0.430  1.310  0.762  0.300
+          150.-  300.  0.176  0.220  0.440  0.490  0.440  1.260  0.190  0.300
+          300.-  600.  0.220  0.220  0.410  0.460  0.410  1.360  0.048  0.300
+          600.-  900.  0.220  0.220  0.400  0.450  0.400  1.390  0.000  0.300
+          900.- 1200.  0.220  0.220  0.380  0.430  0.380  1.440  0.000  0.300
+         1200.- 1500.  0.220  0.220  0.370  0.420  0.370  1.450  0.000  0.300
+         1500.- 1800.  0.220  0.220  0.370  0.420  0.370  1.460  0.000  0.300
+        ---------------------------------------------------------------------
+     
+     
+     
+                  Soil Water Holding Capacity
+          ---------------------------------------------------------
+              Depth    Unavailable Available  Max Avail.  Drainable
+                          (LL15)   (SW-LL15)  (DUL-LL15)  (SAT-DUL)
+                            mm        mm          mm         mm
+          ---------------------------------------------------------
+            0.-  150.      33.00      31.50      31.50       7.50
+          150.-  300.      33.00      33.00      33.00       7.50
+          300.-  600.      66.00      57.00      57.00      15.00
+          600.-  900.      66.00      54.00      54.00      15.00
+          900.- 1200.      66.00      48.00      48.00      15.00
+         1200.- 1500.      66.00      45.00      45.00      15.00
+         1500.- 1800.      66.00      45.00      45.00      15.00
+          ---------------------------------------------------------
+               Totals     396.00     313.50     313.50      90.00
+          ---------------------------------------------------------
+     
+     
+     
+     
+     
+     
+                  Initial Soil Parameters
+          ---------------------------------------------------------
+                 Insoil        Salb     Dif_Con   Dif_Slope
+          ---------------------------------------------------------
+                   0.00        0.12       40.00       16.00
+          ---------------------------------------------------------
+     
+     
+     
+                  Runoff is predicted using scs curve number:
+                Cn2  Cn_Red  Cn_Cov   H_Eff_Depth
+                                           mm
+          ---------------------------------------------------------
+              73.00   20.00    0.80  450.00
+          ---------------------------------------------------------
+     
+     
+     
+           Using Ritchie evaporation model
+            Stage 1 Duration (U): Summer        6.00 (mm)
+                                  Winter        4.00 (mm)
+            Stage 2       (CONA): Summer        3.50 (mm^0.5)
+                                  Winter        2.50 (mm^0.5)
+            Critical Dates:       Summer        1-Nov
+                                  Winter        1-Apr
+            Eo from priestly-taylor
+
+------- paddock.SurfaceOrganicMatter Initialisation ---------------------------
+     
+         - Reading constants
+     
+         - Reading parameters
+     
+     
+     
+                         Initial Surface Organic Matter Data
+         ----------------------------------------------------------------------
+            Name   Type        Dry matter   C        N        P    Cover  Standing_fr
+                                (kg/ha)  (kg/ha)  (kg/ha)  (kg/ha) (0-1)     (0-1)
+         ----------------------------------------------------------------------
+          cotton    cotton        1000.0   400.0     5.0     0.0   0.181     0.0
+         ----------------------------------------------------------------------
+     
+                      Effective Cover from Surface Materials =   0.2
+     
+
+------- paddock.Soil Nitrogen Initialisation ----------------------------------
+     
+        - Reading Parameters
+     
+        - Reading Constants
+     Using standard soil mineralisation for soil type Clay
+     
+     
+     
+           TAV and AMP supplied externally
+     
+     
+     
+                      Soil Profile Properties
+          ------------------------------------------------
+           Layer    pH    OC     NO3     NH4    Urea
+                         (%) (kg/ha) (kg/ha) (kg/ha)
+          ------------------------------------------------
+             1     8.90  0.88   30.00    1.80    0.00
+             2     9.20  0.76   34.00    0.29    0.00
+             3     9.30  0.62   28.00    1.25    0.00
+             4     9.00  0.32   20.00    1.28    0.00
+             5     8.80  0.12   20.00    1.37    0.00
+             6     7.50  0.10   10.00    1.45    0.00
+             7     8.40  0.05    6.00    1.47    0.00
+          ------------------------------------------------
+           Totals              148.00    8.91    0.00
+          ------------------------------------------------
+     
+     
+     
+     
+     
+     
+                  Initial Soil Organic Matter Status
+          ---------------------------------------------------------
+           Layer      Hum-C   Hum-N  Biom-C  Biom-N   FOM-C   FOM-N
+                    (kg/ha) (kg/ha) (kg/ha) (kg/ha) (kg/ha) (kg/ha)
+          ---------------------------------------------------------
+             1      16893.0  1407.7   399.0    49.9   138.9     3.5
+             2      14251.3  1187.6   112.7    14.1   108.1     2.7
+             3      25196.8  2099.7    99.2    12.4    65.6     1.6
+             4      13344.0  1112.0     0.0     0.0    39.8     1.0
+             5       5184.0   432.0     0.0     0.0    24.1     0.6
+             6       4350.0   362.5     0.0     0.0    14.6     0.4
+             7       2190.0   182.5     0.0     0.0     8.9     0.2
+          ---------------------------------------------------------
+           Totals   81409.1  6784.1   610.9    76.4   400.0    10.0
+          ---------------------------------------------------------
+
+------- Irrigate on event Initialisation --------------------------------------
+
+
+------- OZCOT Initialisation ----------------------------------
+
+------- Start of simulation  --------------------------------------------------
+1 January 2018(Day of year=1): 
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                      APSIM Warning Error
+                      -------------------
+     Uninitialised variable "fallowin".
+     Variables should have a value before they are used in an expression.
+     Component name: paddock.Cotton sowing rule
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     
+     
+1 January 2018(Day of year=1), paddock.Cotton sowing rule: 
+     Manager creating a new local real variable : fallowin = 0.00000
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                      APSIM Warning Error
+                      -------------------
+     Uninitialised variable "nextcrop".
+     Variables should have a value before they are used in an expression.
+     Component name: paddock.Cotton sowing rule
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     
+     
+     Manager creating a new local real variable : nextcrop = 0.00000
+15 October 2018(Day of year=288), paddock.Cotton sowing rule: 
+     Manager creating a new local string variable : choosenextcrop = yes
+     Manager sending message :- cotton sow  plants_pm = 11, sowing_depth = 50, cultivar = s71br, row_spacing = 1000, skiprow = 0
+
+15 October 2018 (Day of year=288), cotton:  
+      Sowing
+
+
+        - Reading Cultivar Parameters
+         ---------------------------------------
+         Cultivar   =  S71BR
+         percent_L  =  40.00
+         scboll     =  5.0
+         respcon    =  0.016
+         sqcon      =  0.022
+         fcutout    =  0.5411
+         flai       =  0.87
+         ddisq      =  402.0
+         dlds_max   =  0.12
+         popcon     =  0.03633
+         acotyl     =  525.0
+         rlai       =  0.010
+         frudd      =  50  161  307  338  484  630  848  1071  
+         bltme      =  0.00  0.00  0.00  0.07  0.21  0.33  0.55  1.00  
+         wt         =  0.0104  0.0272  0.1441  0.0988  0.5042  0.9617  1.0000  0.5785  
+         fburr      =  1.23
+         rate_emergence       =  1.0
+         background_retention =  0.90
+
+
+         co2 at  350 ppm
+
+15 October 2018(Day of year=288), paddock.Sowing fertiliser: 
+     Manager sending message :- fertiliser apply  amount = 160 (kg/ha), depth = 50 (mm), type = urea_n
+15 October 2018(Day of year=288), fertiliser: 
+     
+   - Reading Fertiliser Type Parameters
+       160.00 of N as urea (urea_n)
+                                         added at depth   50.00 (layer   1)
+Irrigating with 100mm due to Cotton.sowing event.
+
+
+                      Crop Sowing Data
+         ------------------------------------------------
+         Sowing  Depth  Plants   Spacing    Cultivar   Skip 
+         Day no    mm     /m        mm        Name     Row  
+         ---------------------------------------------------
+           288    50.0    11.0    1000.0      S71BR      0
+         ---------------------------------------------------
+
+
+
+               Root Profile
+        -----------------------------
+            Layer          Lower 
+            Depth          Limit 
+             (cm)         (mm/mm) 
+        -----------------------------
+             15.0          0.220 
+             15.0          0.220 
+             30.0          0.220 
+             30.0          0.250 
+             30.0          0.270 
+             30.0          0.300 
+             30.0          0.330 
+        -----------------------------
+
+
+Cotton development to First Square using RateOfDevelopment 
+22 October 2018 (Day of year=295), cotton:
+    *** Crop emerged with 11.0 plants per m sq, 100% of target population of 11.0
+
+15 December 2018(Day of year=349), paddock.Fertilise on days after sowing - top up: 
+     Manager creating a new local real variable : n_deficit = 39.17875
+     Manager sending message :- fertiliser apply  amount = 39.17875 (kg/ha), depth = 50 (mm), type = urea_n
+15 December 2018(Day of year=349), fertiliser: 
+     
+   - Reading Fertiliser Type Parameters
+        39.18 of N as urea (urea_n)
+                                         added at depth   50.00 (layer   1)
+23 April 2019 (Day of year=113), cotton: 
+   Crop has reached the percent open bolls as defined for maturity. Crop mature.
+23 April 2019(Day of year=113), paddock.Harvesting rule: 
+     Manager sending message :- cotton defoliate
+23 April 2019 (Day of year=113), cotton: 
+         Defoliant spray   1
+2 May 2019 (Day of year=122), cotton: 
+         Crop ready for harvest.
+2 May 2019(Day of year=122), paddock.Harvesting rule: 
+     Manager sending message :- cotton harvest
+
+      Harvest
+
+
+      Days after sowing      =   199
+      bolls/m2               =   200.9        Lint (kg/ha)            =   1794.0
+      N uptake (kg/ha)       =   125.6        bolls sc (g/boll)       =      2.2
+      max squares das (days) =   183          max lai das (days)      =    144
+      maximum squares/m2     =   156.3        maximum lai (m2/m2)     =      4.57
+      Total above ground biomass (kg/ha) =  15000.6
+
+
+      Total green biomass (g/m2) =  1050.7
+      Total sensced biomass (g/m2) =  0.9
+      Total shed biomass (g/m2) =  451.9
+      (Total fruit shed biomass (g/m2) =  88.2)
+      Total harvested biomass (g/m2) =  448.5
+
+
+     Manager sending message :- cotton end_crop
+ 
+ ** Cotton Component Reset 
+ 
+3 May 2019(Day of year=123), paddock.PostHarvestTillage: 
+     Manager sending message :- surfaceorganicmatter tillage  type = user_defined, f_incorp = 0.95, tillage_depth = 150
+3 May 2019(Day of year=123), paddock.SurfaceOrganicMatter: 
+     Residue removed using user_defined
+                                             Fraction Incorporated =     0.95
+                                             Incorporated Depth    =   150.00
+15 October 2019(Day of year=288), paddock.Cotton sowing rule: 
+     Manager sending message :- cotton sow  plants_pm = 11, sowing_depth = 50, cultivar = s71br, row_spacing = 1000, skiprow = 0
+
+15 October 2019 (Day of year=288), cotton:  
+      Sowing
+
+
+        - Reading Cultivar Parameters
+         ---------------------------------------
+         Cultivar   =  S71BR
+         percent_L  =  40.00
+         scboll     =  5.0
+         respcon    =  0.016
+         sqcon      =  0.022
+         fcutout    =  0.5411
+         flai       =  0.87
+         ddisq      =  402.0
+         dlds_max   =  0.12
+         popcon     =  0.03633
+         acotyl     =  525.0
+         rlai       =  0.010
+         frudd      =  50  161  307  338  484  630  848  1071  
+         bltme      =  0.00  0.00  0.00  0.07  0.21  0.33  0.55  1.00  
+         wt         =  0.0104  0.0272  0.1441  0.0988  0.5042  0.9617  1.0000  0.5785  
+         fburr      =  1.23
+         rate_emergence       =  1.0
+         background_retention =  0.90
+
+
+         co2 at  350 ppm
+
+15 October 2019(Day of year=288), paddock.Sowing fertiliser: 
+     Manager sending message :- fertiliser apply  amount = 160 (kg/ha), depth = 50 (mm), type = urea_n
+15 October 2019(Day of year=288), fertiliser: 
+     
+   - Reading Fertiliser Type Parameters
+       160.00 of N as urea (urea_n)
+                                         added at depth   50.00 (layer   1)
+Irrigating with 100mm due to Cotton.sowing event.
+
+
+                      Crop Sowing Data
+         ------------------------------------------------
+         Sowing  Depth  Plants   Spacing    Cultivar   Skip 
+         Day no    mm     /m        mm        Name     Row  
+         ---------------------------------------------------
+           288    50.0    11.0    1000.0      S71BR      0
+         ---------------------------------------------------
+
+
+
+               Root Profile
+        -----------------------------
+            Layer          Lower 
+            Depth          Limit 
+             (cm)         (mm/mm) 
+        -----------------------------
+             15.0          0.220 
+             15.0          0.220 
+             30.0          0.220 
+             30.0          0.250 
+             30.0          0.270 
+             30.0          0.300 
+             30.0          0.330 
+        -----------------------------
+
+
+Cotton development to First Square using RateOfDevelopment 
+21 October 2019 (Day of year=294), cotton:
+    *** Crop emerged with 11.0 plants per m sq, 100% of target population of 11.0
+
+31 December 2019(Day of year=365), clock: 
+     Simulation is terminating due to end criteria being met.
+

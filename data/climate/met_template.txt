@@ -1,0 +1,4 @@
+[weather.met.weather]
+latitude = {latitude} (DECIMAL DEGREES)
+tav = {:.2f} (oC) ! annual average ambient temperature
+amp = {:.2f} (oC) ! annual amplitude in mean monthly temperature
